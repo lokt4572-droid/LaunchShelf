@@ -1,0 +1,43 @@
+{% extends "core/layout.html" %}
+{% block title %}Verify your email — LaunchShelf{% endblock %}
+{% block meta_description %}Verify your LaunchShelf email address.{% endblock %}
+
+{% block content %}
+<section class="form-page verification-page">
+    <div class="eyebrow">One last step</div>
+    <h1>Verify your email</h1>
+    <p class="lede">
+        Enter the six-digit code we sent to your email address to activate your account.
+    </p>
+
+    <form method="post" class="sell-form" novalidate>
+        {% csrf_token %}
+
+        {% if error %}
+            <div class="form-errors" role="alert">{{ error }}</div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <label class="field" for="{{ form.verification_code.id_for_label }}">
+            <span>{{ form.verification_code.label|default:"Verification code" }}</span>
+            {{ form.verification_code }}
+            <span id="verification-help" class="field-help">Use the six digits from the email.</span>
+            {% if form.verification_code.errors %}
+                <span class="field-error">{{ form.verification_code.errors.0 }}</span>
+            {% endif %}
+        </label>
+
+        <button type="submit" class="btn btn-primary">Verify email</button>
+    </form>
+
+    <form method="post" action="{% url 'resend_verification_code' %}">
+        {% csrf_token %}
+        <br><br>
+        <button type="submit" class="btn">Resend code</button>
+    </form>
+</section>
+
+{% endblock %}

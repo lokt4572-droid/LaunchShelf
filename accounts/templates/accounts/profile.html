@@ -1,0 +1,83 @@
+{% extends "core/layout.html" %}
+
+{% block title %}Your profile — LaunchShelf{% endblock %}
+
+{% block content %}
+<section class="seller-profile">
+    <div class="profile-crumb"><a href="{% url 'main' %}">Marketplace</a> / Your seller profile</div>
+
+    <article class="seller-profile-card">
+        <div class="seller-cover" aria-hidden="true"></div>
+        <div class="seller-profile-content">
+            <div class="seller-profile-top">
+                <div>
+                    <div class="seller-avatar" aria-hidden="true">{{ profile.display_name|default:request.user.username|slice:":2"|upper }}</div>
+                    <div class="seller-identity">
+                        <h1>{{ profile.display_name|default:request.user.username }}</h1>
+                        <p>@{{ request.user.username }} · LaunchShelf seller</p>
+                    </div>
+                </div>
+                <a class="btn" href="{% url 'list_project' %}">List a project</a>
+            </div>
+
+            <p class="seller-bio">{{ profile.bio|default:"Build a clear seller profile, add your projects, and give serious buyers the context they need." }}</p>
+            <div class="seller-badges">
+                <span class="seller-badge">✓ Account verified</span>
+                {% if profile.website %}<a class="seller-badge seller-badge-link" href="{{ profile.website }}" rel="noopener" target="_blank">Website ↗</a>{% endif %}
+            </div>
+            <div class="seller-stats">
+                <div><strong>{{ projects|length }}</strong><span>projects for sale</span></div>
+                <div><strong>${{ portfolio_value|floatformat:0 }}</strong><span>portfolio value</span></div>
+                <div><strong>{{ pending_projects|length }}</strong><span>under review</span></div>
+            </div>
+        </div>
+    </article>
+
+    <div class="seller-profile-layout">
+        <section class="seller-projects" aria-labelledby="projects-heading">
+            <div class="seller-section-head">
+                <div><h2 id="projects-heading">Projects for sale</h2><p>Live listings owned by you.</p></div>
+                <span class="seller-count">{{ projects|length }} ACTIVE</span>
+            </div>
+
+            {% if projects %}
+                <div class="seller-filter" role="group" aria-label="Filter your projects">
+                    <button class="active" type="button" data-profile-filter="all">All</button>
+                    <button type="button" data-profile-filter="website">Websites</button>
+                    <button type="button" data-profile-filter="bot">Bots</button>
+                    <button type="button" data-profile-filter="app">Apps</button>
+                </div>
+                <div class="seller-project-list">
+                    {% for project in projects %}
+                        <a class="seller-project" href="{{ project.get_absolute_url }}" data-profile-type="{{ project.listing_type }}">
+                            <div class="seller-project-visual {{ project.visual_class }}"><span>{{ project.type_label }}</span></div>
+                            <div class="seller-project-copy"><small>{{ project.tag }}</small><h3>{{ project.title }}</h3><p>{{ project.description|truncatechars:118 }}</p><div><span>{{ project.metric }}</span>{% if project.verified %}<b>● Verified</b>{% endif %}</div></div>
+                            <div class="seller-project-price"><strong>{{ project.formatted_price }}</strong><span>View listing →</span></div>
+                        </a>
+                    {% endfor %}
+                </div>
+                <p class="seller-empty-filter" id="profile-filter-empty" hidden>No projects match this filter.</p>
+            {% else %}
+                <div class="seller-empty"><strong>Your shelf is empty.</strong><p>Your published projects will appear here with price, traction, and verification status.</p><a class="btn" href="{% url 'list_project' %}">Submit your first project</a></div>
+            {% endif %}
+
+            {% if pending_projects %}
+                <div class="seller-pending"><h3>In review</h3>{% for project in pending_projects %}<div><span>{{ project.get_project_type_display }}</span><strong>{{ project.project_name }}</strong><b>${{ project.asking_price }}</b></div>{% endfor %}</div>
+            {% endif %}
+        </section>
+
+        <aside class="seller-side">
+            <section class="seller-side-card"><h2>Profile details</h2><p>These details appear with your seller account. Keep them current so buyers know who they are dealing with.</p>
+                <form method="post" class="seller-editor">
+                    {% csrf_token %}
+                    <label><span>Username</span><input value="{{ request.user.username }}" disabled></label>
+                    <label><span>Email</span><input value="{{ request.user.email }}" disabled></label>
+                    {% for field in form %}<label><span>{{ field.label }}</span>{{ field }}{% if field.errors %}<em>{{ field.errors.0 }}</em>{% endif %}</label>{% endfor %}
+                    <button class="btn" type="submit">Save profile</button>
+                </form>
+            </section>
+            <section class="seller-side-card seller-tip"><span>SELLER TIP</span><p>Listings with clear traction and transfer details get better buyer conversations.</p><a href="{% url 'list_project' %}">Create another listing →</a></section>
+        </aside>
+    </div>
+</section>
+{% endblock %}

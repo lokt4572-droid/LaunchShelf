@@ -1,0 +1,88 @@
+{% extends "core/layout.html" %}
+
+{% block title %}{{ listing.title }} — LaunchShelf{% endblock %}
+{% block meta_description %}{{ listing.description|truncatechars:160 }}{% endblock %}
+
+{% block content %}
+<article class="detail">
+    <a class="back-link" href="{% url 'main' %}#marketplace">← All projects</a>
+
+    <div class="detail-grid">
+        <div class="visual {{ listing.visual_class }} detail-visual">
+            <span>{{ listing.visual_label }}</span>
+        </div>
+
+        <div class="detail-copy">
+            <p class="tag">{{ listing.tag }}</p>
+            <br><br>
+            <h1>{{ listing.title }}</h1>
+            <br>
+            <br>
+            <p class="detail-price">{{ listing.formatted_price }}</p>
+            <br><br>
+            <ul class="detail-meta">
+                <br>
+                <li>{{ listing.get_listing_type_display }}</li>
+                <br><br>
+                <li>{{ listing.metric }}</li>
+                <br><br>
+                <li>{% if listing.verified %}Verified listing{% else %}Unverified{% endif %}</li>
+                <br><br>
+            </ul>
+            <br><br>
+            <p>{{ listing.description }}</p>
+            <br><br>
+            {% if user.is_authenticated %}
+                <div class="listing-actions">
+                    <form method="post" action="{% url 'toggle_favorite' listing.slug %}">
+                        {% csrf_token %}
+                        <button class="btn btn-secondary" type="submit">{% if is_favorited %}Saved ✓{% else %}Save project{% endif %}</button>
+                    </form>
+                </div>
+                {% if listing.seller_id != user.id %}
+                    <form method="post" action="{% url 'make_offer' listing.slug %}" class="offer-form">
+                        {% csrf_token %}
+                        <h2>Make an offer</h2>
+                        {% for field in offer_form %}
+                            <label class="field"><span>{{ field.label }}</span>{{ field }}{% if field.errors %}<span class="field-error">{{ field.errors.0 }}</span>{% endif %}</label>
+                        {% endfor %}
+                        <button class="btn btn-primary" type="submit">Send offer</button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <a class="btn btn-primary" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to make an offer</a>
+            {% endif %}
+        </div>
+    </div>
+</article>
+
+{% if related %}
+<section class="section">
+    <div class="section-head">
+        <div>
+            <h2>Similar on the shelf</h2>
+            <p>More {{ listing.get_listing_type_display|lower }}s currently listed.</p>
+        </div>
+    </div>
+    <div class="grid">
+        {% for item in related %}
+            <a class="listing" href="{{ item.get_absolute_url }}" data-type="{{ item.listing_type }}">
+                <div class="visual {{ item.visual_class }}">
+                    <span>{{ item.visual_label }}</span>
+                </div>
+                <div class="details">
+                    <div class="tag">{{ item.tag }}</div>
+                    <div class="title-row">
+                        <h3>{{ item.title }}</h3>
+                        <span class="price">{{ item.formatted_price }}</span>
+                    </div>
+                    <div class="meta">
+                        <span>{{ item.metric }}</span>
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

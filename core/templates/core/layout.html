@@ -1,0 +1,64 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LaunchShelf{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}A curated marketplace for websites, apps, and Telegram bots.{% endblock %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/main_css.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+
+    <header class="nav">
+        <a class="brand" href="{% url 'main' %}">
+            <i class="brand-mark" aria-hidden="true"></i>
+            LaunchShelf
+        </a>
+
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+            Menu
+        </button>
+
+        <nav id="site-nav">
+            <a href="{% url 'main' %}#marketplace">Explore</a>
+            <a href="{% url 'main' %}#how">How it works</a>
+            <a href="{% url 'list_project' %}">For sellers</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'profile' %}">Profile</a>
+                <form method="post" action="{% url 'logout' %}" class="nav-logout">
+                    {% csrf_token %}
+                    <button class="btn" type="submit">Log out</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Log in</a>
+                <a href="{% url 'signup' %}">Create account</a>
+            {% endif %}
+            <a class="btn" href="{% url 'list_project' %}">List a project</a>
+        </nav>
+    </header>
+
+    {% if messages %}
+        <div class="flashes" role="status">
+            {% for message in messages %}
+                <p class="flash {{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <main id="content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <span>© 2026 LaunchShelf</span>
+        <span>Made for independent builders</span>
+    </footer>
+
+    <script src="{% static 'js/main_js.js' %}"></script>
+</body>
+</html>

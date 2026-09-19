@@ -1,0 +1,23 @@
+{% extends "core/layout.html" %}
+
+{% block title %}Create an account — LaunchShelf{% endblock %}
+
+{% block content %}
+<section class="form-page">
+    <div class="eyebrow">For builders</div>
+    <h1>Create your account</h1>
+    <p class="lede">Your account details will be used automatically when you submit a project.</p>
+    <form method="post" class="sell-form" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+            <label class="field">
+                <span>{{ field.label }}</span>
+                {{ field }}
+                {% if field.errors %}<span class="field-error">{{ field.errors.0 }}</span>{% endif %}
+            </label>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Create account</button>
+    </form>
+    <p>Already registered? <a href="{% url 'login' %}">Log in</a>.</p>
+</section>
+{% endblock %}

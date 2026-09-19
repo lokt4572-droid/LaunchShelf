@@ -1,0 +1,164 @@
+{% extends "core/layout.html" %}
+{% load static %}
+
+{% block title %}LaunchShelf — Digital projects for sale{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div>
+        <div class="eyebrow">
+            <i class="pulse" aria-hidden="true"></i>
+            Independent digital products
+        </div>
+
+        <h1>Buy the next thing worth building on.</h1>
+
+        <p>
+            A curated marketplace for profitable websites,
+            polished apps, and Telegram bots that are ready
+            for their next chapter.
+        </p>
+
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="#marketplace">Explore projects</a>
+            <a class="btn btn-plain" href="#how">
+                How it works
+                <span aria-hidden="true">↗</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="showcase">
+        <div class="topbar">
+            <span>FEATURED THIS WEEK</span>
+            <span>{% if featured %}{{ featured.type_label }}{% else %}LIVE LISTINGS{% endif %}</span>
+        </div>
+
+        {% if featured %}
+            <a class="preview-card" href="{{ featured.get_absolute_url }}">
+                <header>
+                    <div class="dots" aria-hidden="true">
+                        <i></i><i></i><i></i>
+                    </div>
+                    <span class="preview-name">
+                        {{ featured.preview_name|default:featured.title }}
+                    </span>
+                </header>
+                <div class="mini-title">
+                    {{ featured.preview_tagline|default:featured.tag }}
+                </div>
+                <div class="mini-row">
+                    <span class="mini-chip hot">{{ featured.formatted_price }}</span>
+                    <span class="mini-chip">{{ featured.type_label }}</span>
+                    <span class="mini-chip">{{ featured.metric }}</span>
+                </div>
+            </a>
+        {% else %}
+            <div class="preview-card">
+                <div class="mini-title">No listings yet.</div>
+                <p class="empty-copy">Be the first to put a project on the shelf.</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="stats">
+    <div class="stat">
+        <b>{{ listed_count }}</b>
+        <span>projects listed</span>
+    </div>
+    <div class="stat">
+        <b>${{ listed_value }}</b>
+        <span>value on the shelf</span>
+    </div>
+    <div class="stat">
+        <b>{{ type_count }}</b>
+        <span>product categories</span>
+    </div>
+</section>
+
+<section class="section" id="marketplace">
+    <div class="section-head">
+        <div>
+            <h2>Fresh on the shelf</h2>
+            <p>Selected projects, each with a real head start.</p>
+        </div>
+
+        <div class="filter" role="group" aria-label="Filter projects">
+            <button type="button" class="active" data-filter="all">All projects</button>
+            <button type="button" data-filter="website">Websites</button>
+            <button type="button" data-filter="bot">Telegram bots</button>
+            <button type="button" data-filter="app">Apps</button>
+        </div>
+    </div>
+
+    <div class="grid" id="listings">
+        {% for listing in listings %}
+            <a class="listing" href="{{ listing.get_absolute_url }}" data-type="{{ listing.listing_type }}">
+                <div class="visual {{ listing.visual_class }}">
+                    <span>{{ listing.visual_label }}</span>
+                </div>
+                <div class="details">
+                    <div class="tag">{{ listing.tag }}</div>
+                    <div class="title-row">
+                        <h3>{{ listing.title }}</h3>
+                        <span class="price">{{ listing.formatted_price }}</span>
+                    </div>
+                    <div class="meta">
+                        <span>{{ listing.metric }}</span>
+                        {% if listing.verified %}
+                            <span class="rating">● Verified</span>
+                        {% else %}
+                            <span>Unverified</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        {% empty %}
+            <p class="empty-copy">No projects are live yet. <a href="{% url 'list_project' %}">List yours</a>.</p>
+        {% endfor %}
+    </div>
+    <p class="empty-copy filter-empty" id="filter-empty" hidden>
+        Nothing in this category yet. Try another filter or
+        <a href="{% url 'list_project' %}">list a project</a>.
+    </p>
+</section>
+
+<section class="how" id="how">
+    <h2>A clean way to change hands.</h2>
+    <div class="steps">
+        <div class="step">
+            <b>01 / List</b>
+            <h3>Show your work properly.</h3>
+            <p>
+                Add your project story, metrics, screenshots,
+                and a price. Keep control until you find the
+                right buyer.
+            </p>
+        </div>
+        <div class="step">
+            <b>02 / Connect</b>
+            <h3>Meet serious buyers.</h3>
+            <p>
+                Buyers can review the details, ask questions,
+                and make a direct offer—without the noise.
+            </p>
+        </div>
+        <div class="step">
+            <b>03 / Transfer</b>
+            <h3>Hand it over safely.</h3>
+            <p>
+                Use a clear checklist to transfer domains,
+                code, accounts, and know-how with confidence.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="cta" id="sell">
+    <div class="eyebrow">Ready when you are</div>
+    <h2>Your side project deserves a second life.</h2>
+    <p>Turn the thing you built into someone else’s starting line.</p>
+    <a class="btn" href="{% url 'list_project' %}">List your project — it’s free</a>
+</section>
+{% endblock %}
