@@ -4,6 +4,7 @@ Django settings for LaunchShelf project.
 
 import os
 from pathlib import Path
+import dj_database_url
 
 from dotenv import load_dotenv
 
@@ -75,19 +76,21 @@ WSGI_APPLICATION = "LaunchShelf.wsgi.application"
 
 DATABASE_ENGINE = os.environ.get("DJANGO_DB_ENGINE", "django.db.backends.postgresql")
 
-if DATABASE_ENGINE == "django.db.backends.sqlite3":
-    # Local-only fallback. Production and shared environments must use PostgreSQL.
-    DATABASES = {"default": {"ENGINE": DATABASE_ENGINE, "NAME": BASE_DIR / "db.sqlite3"}}
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=int(os.environ.get("POSTGRES_CONN_MAX_AGE", "60")),
+        )
+    }
+
 else:
     DATABASES = {
         "default": {
-            "ENGINE": DATABASE_ENGINE,
-            "NAME": os.environ.get("POSTGRES_DB", "launchshelf"),
-            "USER": os.environ.get("POSTGRES_USER", "launchshelf"),
-            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
-            "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
-            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-            "CONN_MAX_AGE": int(os.environ.get("POSTGRES_CONN_MAX_AGE", "60")),
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 

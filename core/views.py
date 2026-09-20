@@ -4,7 +4,7 @@ from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import OfferForm, SellerInquiryForm
-from .models import Favorite, Offer, Project
+from .models import Favorite, Project
 
 
 def main(request):

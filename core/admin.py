@@ -1,7 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Favorite, Offer, Project, ProjectImage, SellerInquiry
-
+from .models import Favorite, Offer, Project, SellerInquiry
 
 
 @admin.register(Project)
@@ -19,20 +18,6 @@ class ProjectAdmin(admin.ModelAdmin):
     list_filter = ("listing_type", "status", "verified", "featured", "is_published")
     search_fields = ("title", "tag", "slug", "seller__username", "seller__email")
     prepopulated_fields = {"slug": ("title",)}
-
-
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug")
-    prepopulated_fields = {"slug": ("name",)}
-    search_fields = ("name", "slug")
-
-
-@admin.register(ProjectImage)
-class ProjectImageAdmin(admin.ModelAdmin):
-    list_display = ("project", "sort_order", "alt_text")
-    list_filter = ("project__listing_type",)
-    search_fields = ("project__title", "alt_text")
 
 
 @admin.register(Favorite)
