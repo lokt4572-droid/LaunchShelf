@@ -28,6 +28,10 @@ else:
 
 ALLOWED_HOSTS = ["launchshelf.onrender.com"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://launchshelf.onrender.com",
+]
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -63,9 +67,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = "LaunchShelf.urls"
 
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://launchshelf.onrender.com",
-]
+
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "list_project"
