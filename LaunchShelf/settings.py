@@ -24,14 +24,9 @@ else:
     if not SECRET_KEY:
         raise RuntimeError("DJANGO_SECRET_KEY must be set when DEBUG is disabled.")
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS",
-        "127.0.0.1,localhost"
-    ).split(",")
-    if host.strip()
-]
+
+
+ALLOWED_HOSTS = ["launchshelf.onrender.com"]
 
 STORAGES = {
     "default": {
@@ -66,6 +61,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "LaunchShelf.urls"
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://launchshelf.onrender.com",
+]
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "list_project"
