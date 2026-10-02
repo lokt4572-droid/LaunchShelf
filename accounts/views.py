@@ -113,7 +113,7 @@ def signup(request):
     return render(request, "accounts/signup.html", {"form": form})
 
 
-def verify_email(request):
+def email_verification_code(request):
     pending_id = request.session.get("pending_signup_id")
     if not pending_id:
         return redirect("signup")
