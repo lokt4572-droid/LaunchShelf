@@ -55,7 +55,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -139,7 +138,7 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in {
 }
 
 VERIFICATION_CODE_TTL = 10 * 60
-EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "30"))
 
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
