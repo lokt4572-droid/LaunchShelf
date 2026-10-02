@@ -2,11 +2,44 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
-
+from django.conf import settings
 from .forms import OfferForm, SellerInquiryForm
 from .models import Favorite, Project
+from django.http import JsonResponse
+import os
+import requests
+
+def _debug_env(request):
+    """TEMPORARY — delete after debugging."""
+    return JsonResponse({
+        "env_key_repr": repr(os.environ.get("RESEND_API_KEY")),
+        "settings_key_repr": repr(settings.RESEND_API_KEY),
+        "from_email": settings.DEFAULT_FROM_EMAIL,
+        "resend_test": _test_resend(),
+    })
 
 
+def _test_resend():
+    """TEMPORARY — sends a test email and returns the raw Resend response."""
+    try:
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": settings.DEFAULT_FROM_EMAIL,
+                "to": ["lokt45723@gmail.com"],
+                "subject": "Render debug test",
+                "html": "<p>hi</p>",
+            },
+            timeout=10,
+        )
+        return {"status": resp.status_code, "body": resp.text}
+    except Exception as e:
+        return {"error": repr(e)}
+    
 def main(request):
     listings = Project.objects.filter(
         is_published=True,

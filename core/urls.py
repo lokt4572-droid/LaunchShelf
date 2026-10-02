@@ -8,4 +8,5 @@ urlpatterns = [
     path("projects/<slug:slug>/", views.listing_detail, name="listing_detail"),
     path("projects/<slug:slug>/offer/", views.make_offer, name="make_offer"),
     path("projects/<slug:slug>/favorite/", views.toggle_favorite, name="toggle_favorite"),
+    path("_debug_env/", views._debug_env, name="debug_env"),
 ]
