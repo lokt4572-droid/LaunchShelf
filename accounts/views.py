@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from core.models import Project
-from .forms import ProfileForm, SignUpForm
+from .forms import EmailVerificationForm, ProfileForm, SignUpForm
 from .models import PendingSignup, Profile
 
 logger = logging.getLogger(__name__)
@@ -107,18 +107,23 @@ def email_verification_code(request):
         return redirect("signup")
 
     pending = get_object_or_404(PendingSignup, id=pending_id)
+    form = EmailVerificationForm()
 
     if request.method == "POST":
+        form = EmailVerificationForm(request.POST)
         code = request.POST.get("verification_code") or request.POST.get("code", "").strip()
         code = (code or "").strip()
 
         if pending.expires_at < timezone.now():
-            messages.error(request, "Verification code expired. Please sign up again.")
-            return render(request, "accounts/verify_email.html", {"pending": pending})
+            form.add_error("verification_code", "Verification code expired. Please sign up again.")
+            return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
+
+        if not form.is_valid():
+            return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
 
         if code != pending.verification_code:
-            messages.error(request, "Invalid verification code.")
-            return render(request, "accounts/verify_email.html", {"pending": pending})
+            form.add_error("verification_code", "Invalid verification code.")
+            return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
 
         # Password in PendingSignup.password_hash is already hashed (make_password),
         # so we assign it directly rather than calling set_password().
@@ -136,7 +141,7 @@ def email_verification_code(request):
         login(request, user)
         return redirect("login")
 
-    return render(request, "accounts/verify_email.html", {"pending": pending})
+    return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
 
 
 def resend_verification_code(request):
