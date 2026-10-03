@@ -2,13 +2,13 @@ import logging
 import secrets
 from datetime import timedelta
 
-import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -27,49 +27,28 @@ def _new_verification_code():
 
 def _send_verification_email(pending_signup):
     """
-    Send the verification code via Resend's HTTP API.
+    Send the verification code via Django's email backend.
     Returns True on success, False on failure. Never raises.
     """
-    subject = "Your LaunchShelf verification code"
     minutes = settings.VERIFICATION_CODE_TTL // 60
-
-    html = f"""
-        <p>Hi {pending_signup.username},</p>
-        <p>Your verification code is:</p>
-        <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">
-            {pending_signup.verification_code}
-        </p>
-        <p>This code expires in {minutes} minutes.</p>
-        <p>If you didn't request this, ignore this email.</p>
-    """
+    message = (
+        f"Hi {pending_signup.username},\n\n"
+        f"Your verification code is: {pending_signup.verification_code}\n\n"
+        f"This code expires in {minutes} minutes.\n"
+        "If you didn't request this, ignore this email."
+    )
 
     try:
-        resp = requests.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "from": settings.DEFAULT_FROM_EMAIL,
-                "to": [pending_signup.email],
-                "subject": subject,
-                "html": html,
-            },
-            timeout=10,
+        return send_mail(
+            subject="Your LaunchShelf verification code",
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[pending_signup.email],
+            fail_silently=False,
         )
-    except requests.RequestException:
-        logger.exception("Resend request failed for %s", pending_signup.email)
+    except Exception:
+        logger.exception("Verification email delivery failed for %s", pending_signup.email)
         return False
-
-    if resp.status_code >= 400:
-        logger.error(
-            "Resend error %s for %s: %s",
-            resp.status_code, pending_signup.email, resp.text,
-        )
-        return False
-
-    return True
 
 
 def signup(request):
@@ -77,14 +56,23 @@ def signup(request):
         form = SignUpForm(request.POST)
 
         if form.is_valid():
+            username = form.cleaned_data["username"]
+            email = form.cleaned_data["email"]
+            if PendingSignup.objects.filter(username=username).exists():
+                form.add_error(
+                    "username",
+                    "That username is already waiting for verification. Choose another username.",
+                )
+                return render(request, "accounts/signup.html", {"form": form})
+
             code = _new_verification_code()
             expires_at = timezone.now() + timedelta(seconds=settings.VERIFICATION_CODE_TTL)
 
             try:
                 pending_signup, _ = PendingSignup.objects.update_or_create(
-                    email=form.cleaned_data["email"],
+                    email=email,
                     defaults={
-                        "username": form.cleaned_data["username"],
+                        "username": username,
                         "password_hash": make_password(form.cleaned_data["password1"]),
                         "verification_code": code,
                         "expires_at": expires_at,
@@ -121,16 +109,15 @@ def email_verification_code(request):
     pending = get_object_or_404(PendingSignup, id=pending_id)
 
     if request.method == "POST":
-        code = request.POST.get("code", "").strip()
+        code = request.POST.get("verification_code") or request.POST.get("code", "").strip()
+        code = (code or "").strip()
 
         if pending.expires_at < timezone.now():
-            pending.delete()
-            request.session.pop("pending_signup_id", None)
-            messages.error(request, "Your code has expired. Please sign up again.")
-            return redirect("signup")
+            messages.error(request, "Verification code expired. Please sign up again.")
+            return render(request, "accounts/verify_email.html", {"pending": pending})
 
         if code != pending.verification_code:
-            messages.error(request, "That code is incorrect.")
+            messages.error(request, "Invalid verification code.")
             return render(request, "accounts/verify_email.html", {"pending": pending})
 
         # Password in PendingSignup.password_hash is already hashed (make_password),
@@ -140,13 +127,14 @@ def email_verification_code(request):
             email=pending.email,
             password=pending.password_hash,
         )
+        Profile.objects.create(user=user, display_name=user.get_username())
         pending.delete()
         request.session.pop("pending_signup_id", None)
 
         # Explicitly set the backend so login() never raises.
         user.backend = "django.contrib.auth.backends.ModelBackend"
         login(request, user)
-        return redirect("main")
+        return redirect("login")
 
     return render(request, "accounts/verify_email.html", {"pending": pending})
 

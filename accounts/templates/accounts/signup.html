@@ -13,10 +13,8 @@
         <label class="field">
             <span>{{ field.label }}</span>
             {{ field }}
-            {% if form.non_field_errors %}
-                <div class="field-error">
-                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-                </div>
+            {% if field.errors %}
+                <div class="field-error">{{ field.errors|join:" " }}</div>
             {% endif %}
         </label>
         {% if messages %}
@@ -25,6 +23,11 @@
             {% endfor %}
         {% endif %}
     {% endfor %}
+    {% if form.non_field_errors %}
+        <div class="field-error">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+    {% endif %}
     <button class="btn btn-primary" type="submit">Create account</button>
 </form>
     <p>Already registered? <a href="{% url 'login' %}">Log in</a>.</p>
