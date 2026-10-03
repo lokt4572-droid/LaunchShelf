@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -47,6 +47,17 @@ class AccountTests(TestCase):
         self.assertRedirects(response, reverse("verify_email"))
         self.assertFalse(User.objects.filter(username="builder").exists())
         self.assertEqual(PendingSignup.objects.count(), 1)
+
+    @override_settings(DEBUG=False, RESEND_API_KEY="")
+    @patch("accounts.views.send_mail")
+    def test_signup_without_production_email_configuration_returns_form_error(self, mock_send_mail):
+        response = self.client.post(reverse("signup"), self.signup_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "We could not send the verification email")
+        self.mock_post.assert_not_called()
+        mock_send_mail.assert_not_called()
+        self.assertFalse(PendingSignup.objects.exists())
 
     def test_verification_creates_active_user_and_profile(self):
         pending_signup = self.start_signup()

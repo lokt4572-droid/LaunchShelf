@@ -138,12 +138,12 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in {
 }
 
 VERIFICATION_CODE_TTL = 15 * 60
-EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "30"))
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "5"))
 
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "LaunchShelf <onboarding@resend.dev>")
 
 

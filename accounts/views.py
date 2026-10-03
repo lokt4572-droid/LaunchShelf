@@ -1,7 +1,6 @@
 import logging
 import secrets
 from datetime import timedelta
-
 import requests
 from django.conf import settings
 from django.contrib import messages
@@ -14,7 +13,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-
 from core.models import Project
 from .forms import EmailVerificationForm, ProfileForm, SignUpForm
 from .models import PendingSignup, Profile
@@ -56,7 +54,7 @@ def _send_verification_email(pending_signup):
                     "subject": "Your LaunchShelf verification code",
                     "html": html,
                 },
-                timeout=10,
+                timeout=5,
             )
             if response.status_code >= 400:
                 logger.error(
@@ -70,6 +68,13 @@ def _send_verification_email(pending_signup):
         except requests.RequestException:
             logger.exception("Resend request failed for %s", pending_signup.email)
             return False
+
+    if not settings.DEBUG:
+        logger.error(
+            "RESEND_API_KEY is not set; cannot deliver verification email to %s",
+            pending_signup.email,
+        )
+        return False
 
     message = (
         f"Hi {pending_signup.username},\n\n"
