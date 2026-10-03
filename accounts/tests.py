@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -16,6 +16,18 @@ class AccountTests(TestCase):
         "password1": "strong-password-123",
         "password2": "strong-password-123",
     }
+
+    def setUp(self):
+        super().setUp()
+        self.mock_post_patcher = patch(
+            "accounts.views.requests.post",
+            return_value=Mock(status_code=200, text=""),
+        )
+        self.mock_post = self.mock_post_patcher.start()
+
+    def tearDown(self):
+        self.mock_post_patcher.stop()
+        super().tearDown()
 
     def start_signup(self):
         response = self.client.post(reverse("signup"), self.signup_data)
@@ -73,16 +85,13 @@ class AccountTests(TestCase):
             {"verification_code": pending_signup.verification_code},
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "expired")
+        self.assertRedirects(response, reverse("signup"))
         self.assertFalse(User.objects.exists())
-        self.assertTrue(PendingSignup.objects.exists())
+        self.assertFalse(PendingSignup.objects.filter(pk=pending_signup.pk).exists())
 
-    @patch("accounts.views.send_mail", return_value=1)
-    def test_resend_replaces_code_and_refreshes_expiration(self, send_mail):
+    def test_resend_replaces_code_and_refreshes_expiration(self):
         pending_signup = self.start_signup()
         old_code = pending_signup.verification_code
-        send_mail.reset_mock()
 
         response = self.client.post(reverse("resend_verification_code"))
         pending_signup.refresh_from_db()
@@ -90,7 +99,7 @@ class AccountTests(TestCase):
         self.assertRedirects(response, reverse("verify_email"))
         self.assertNotEqual(pending_signup.verification_code, old_code)
         self.assertGreater(pending_signup.expires_at, timezone.now())
-        send_mail.assert_called_once()
+        self.assertGreaterEqual(self.mock_post.call_count, 2)
 
     def test_listing_requires_login(self):
         response = self.client.get(reverse("list_project"))

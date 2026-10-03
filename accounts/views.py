@@ -2,6 +2,7 @@ import logging
 import secrets
 from datetime import timedelta
 
+import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -9,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -27,10 +28,49 @@ def _new_verification_code():
 
 def _send_verification_email(pending_signup):
     """
-    Send the verification code via Django's email backend.
+    Send the verification code using Resend when configured, otherwise fall back to Django SMTP.
     Returns True on success, False on failure. Never raises.
     """
     minutes = settings.VERIFICATION_CODE_TTL // 60
+    html = f"""
+        <p>Hi {pending_signup.username},</p>
+        <p>Your verification code is:</p>
+        <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">
+            {pending_signup.verification_code}
+        </p>
+        <p>This code expires in {minutes} minutes.</p>
+        <p>If you didn't request this, ignore this email.</p>
+    """
+
+    if settings.RESEND_API_KEY:
+        try:
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.DEFAULT_FROM_EMAIL,
+                    "to": [pending_signup.email],
+                    "subject": "Your LaunchShelf verification code",
+                    "html": html,
+                },
+                timeout=10,
+            )
+            if response.status_code >= 400:
+                logger.error(
+                    "Resend error %s for %s: %s",
+                    response.status_code,
+                    pending_signup.email,
+                    response.text,
+                )
+                return False
+            return True
+        except requests.RequestException:
+            logger.exception("Resend request failed for %s", pending_signup.email)
+            return False
+
     message = (
         f"Hi {pending_signup.username},\n\n"
         f"Your verification code is: {pending_signup.verification_code}\n\n"
@@ -58,10 +98,26 @@ def signup(request):
         if form.is_valid():
             username = form.cleaned_data["username"]
             email = form.cleaned_data["email"]
-            if PendingSignup.objects.filter(username=username).exists():
+
+            if User.objects.filter(username=username).exists():
+                form.add_error("username", "That username is already taken.")
+                return render(request, "accounts/signup.html", {"form": form})
+
+            if User.objects.filter(email=email).exists():
+                form.add_error("email", "An account with that email already exists.")
+                return render(request, "accounts/signup.html", {"form": form})
+
+            if PendingSignup.objects.filter(username=username).exclude(email=email).exists():
                 form.add_error(
                     "username",
                     "That username is already waiting for verification. Choose another username.",
+                )
+                return render(request, "accounts/signup.html", {"form": form})
+
+            if PendingSignup.objects.filter(email=email).exists():
+                form.add_error(
+                    "email",
+                    "That email is already waiting for verification. Check your inbox or use another email.",
                 )
                 return render(request, "accounts/signup.html", {"form": form})
 
@@ -111,29 +167,37 @@ def email_verification_code(request):
 
     if request.method == "POST":
         form = EmailVerificationForm(request.POST)
-        code = request.POST.get("verification_code") or request.POST.get("code", "").strip()
-        code = (code or "").strip()
-
-        if pending.expires_at < timezone.now():
-            form.add_error("verification_code", "Verification code expired. Please sign up again.")
-            return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
 
         if not form.is_valid():
             return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
+
+        code = form.cleaned_data["verification_code"].strip()
+
+        if pending.expires_at < timezone.now():
+            pending.delete()
+            request.session.pop("pending_signup_id", None)
+            messages.error(request, "Verification code expired. Please sign up again.")
+            return redirect("signup")
 
         if code != pending.verification_code:
             form.add_error("verification_code", "Invalid verification code.")
             return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
 
-        # Password in PendingSignup.password_hash is already hashed (make_password),
-        # so we assign it directly rather than calling set_password().
-        user = User.objects.create(
-            username=pending.username,
-            email=pending.email,
-            password=pending.password_hash,
-        )
-        Profile.objects.create(user=user, display_name=user.get_username())
-        pending.delete()
+        try:
+            with transaction.atomic():
+                # Password in PendingSignup.password_hash is already hashed (make_password),
+                # so we assign it directly rather than calling set_password().
+                user = User.objects.create(
+                    username=pending.username,
+                    email=pending.email,
+                    password=pending.password_hash,
+                )
+                Profile.objects.create(user=user, display_name=user.get_username())
+                pending.delete()
+        except IntegrityError:
+            form.add_error("verification_code", "This account could not be verified. Please try again.")
+            return render(request, "accounts/verify_email.html", {"pending": pending, "form": form})
+
         request.session.pop("pending_signup_id", None)
 
         # Explicitly set the backend so login() never raises.
